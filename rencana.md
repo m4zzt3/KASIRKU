@@ -25,6 +25,8 @@ graph TD
 
 ## 📋 Rencana Tahapan Pengembangan
 
+- [x] **Tahap 0: Inisialisasi Git & .gitignore**
+  - Inisialisasi repositori git lokal dan buat berkas `.gitignore`.
 - [ ] **Tahap 1: Desain Database (Google Sheets)**
   - Tentukan tabel yang dibutuhkan (misal: `Produk`, `Transaksi`, `Detail_Transaksi`).
 - [ ] **Tahap 2: Pembuatan API (Google Apps Script - Kode.js)**
