@@ -4,11 +4,7 @@
  * Endpoint utama Web App untuk merender index.html
  */
 function doGet(e) {
-    return HtmlService.createTemplateFromFile('index')
-        .evaluate()
-        .setTitle('KasirQu - Sistem Kasir POS & Inventaris Modern')
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return ContentService.createTextOutput("API Kasirku is Running");
 }
 
 /**

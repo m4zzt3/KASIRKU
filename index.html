@@ -154,9 +154,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button id="btn-sidebar-config-api" onclick="openGasUrlConfigModalDirect()" class="p-2 text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 rounded-lg transition-colors hidden" title="Konfigurasi API">
-                        <i data-lucide="settings" class="w-4 h-4"></i>
-                    </button>
+                    
                     <button onclick="logout()" class="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800/50 rounded-lg transition-colors">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </button>
@@ -209,9 +207,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button id="btn-mobile-config-api" onclick="openGasUrlConfigModalDirect()" class="p-1.5 text-slate-500 hover:text-indigo-400 hover:bg-slate-800/50 rounded-lg hidden" title="Konfigurasi API">
-                        <i data-lucide="settings" class="w-4 h-4"></i>
-                    </button>
+                    
                     <button onclick="logout()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800/50 rounded-lg">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </button>
@@ -912,18 +908,7 @@
         </div>
     </div>
 
-    <!-- GAS URL CONFIGURATION MODAL (For Vercel deployment) -->
-    <div id="gas-url-config-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div class="flex items-center gap-3 text-indigo-600">
-                <div class="bg-indigo-50 p-2.5 rounded-xl text-indigo-600">
-                    <i data-lucide="link-2" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h3 class="text-base font-extrabold text-slate-950">Konfigurasi API Google Sheets</h3>
-                    <p class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">KASIRKU x VERCEL</p>
-                </div>
-            </div>
+    
             <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
                 <p>Aplikasi ini berjalan di luar Google Apps Script (misalnya di Vercel). Silakan masukkan **URL Web App** Google Apps Script Anda untuk menghubungkan database Google Sheets.</p>
                 <div class="bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-100 space-y-1 text-[11px]">
@@ -968,7 +953,7 @@
             let activePage = "dashboard";
 
             // Simpan callback tunda saat URL dikonfigurasi
-            let pendingGasRun = null;
+            
 
             // --- GAS RUNNER HELPER (SINGLE PATTERN) ---
             function gasRun(funcName) {
@@ -982,7 +967,7 @@
                     }
 
                     // Fallback: Berjalan di Vercel atau server statis eksternal
-                    const gasApiUrl = localStorage.getItem('gas_api_url') || "";
+                    const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
                     if (!gasApiUrl) {
                         console.warn("URL API Google Apps Script belum dikonfigurasi.");
                         pendingGasRun = { funcName, args, resolve, reject };
@@ -1021,7 +1006,7 @@
 
             // Fungsi Pendukung Konfigurasi API
             window.openGasUrlConfigModalDirect = function() {
-                const gasApiUrl = localStorage.getItem('gas_api_url') || "";
+                const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
                 document.getElementById('gas-url-input').value = gasApiUrl;
                 document.getElementById('gas-url-config-modal').classList.remove('hidden');
                 lucide.createIcons();
@@ -1097,14 +1082,11 @@
                 if (!isGasEnv) {
                     // Tampilkan tombol konfigurasi API
                     document.getElementById('login-api-config-container').classList.remove('hidden');
-                    document.getElementById('btn-sidebar-config-api').classList.remove('hidden');
-                    document.getElementById('btn-mobile-config-api').classList.remove('hidden');
+                    
+                    
                     
                     // Buka modal konfigurasi jika URL belum diatur
-                    if (!localStorage.getItem('gas_api_url')) {
-                        setTimeout(() => {
-                            openGasUrlConfigModal();
-                        }, 500);
+                    , 500);
                     }
                 }
                 
@@ -1131,14 +1113,9 @@
 
                 // Cek apakah menggunakan API Eksternal (Vercel) atau GAS Iframe
                 const isGasEnv = (typeof google !== 'undefined' && google.script && google.script.run);
-                const gasApiUrl = localStorage.getItem('gas_api_url') || "";
+                const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
 
-                if (!isGasEnv && !gasApiUrl) {
-                    showFullPageLoading(false);
-                    showToast("Harap hubungkan API Google Sheets terlebih dahulu!", "error");
-                    openGasUrlConfigModal();
-                    return;
-                }
+                
 
                 // Call Production Backend API
                 gasRun('loginUser', usernameInput, passwordInput)
