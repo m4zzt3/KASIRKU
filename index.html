@@ -13,22 +13,62 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css">
-</head>
     <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
+
+    <!-- Full Page Loader -->
+    <div id="fullPageLoader" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center text-white hidden">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-3"></div>
+        <p class="font-semibold text-sm tracking-wide">Memproses data...</p>
+    </div>
+
+    <!-- Custom Dialog / Confirmation Box -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-100">
+            <div class="flex items-center gap-3 text-rose-600">
+                <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                <h3 class="text-lg font-bold">Konfirmasi Tindakan</h3>
+            </div>
+            <p id="confirm-modal-message" class="text-sm text-slate-600">Apakah Anda yakin ingin melakukan tindakan ini?</p>
+            <div class="flex gap-3 pt-2">
+                <button id="btn-confirm-cancel" class="flex-1 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 transition-all">Batal</button>
+                <button id="btn-confirm-proceed" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all">Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= AUTH PAGE (LOGIN) ================= -->
+    <section id="loginPage" class="auth-page bg-slate-100 min-h-screen flex items-center justify-center px-4 relative">
+        <div class="bg-white w-full max-w-md p-8 rounded-3xl shadow-xl border border-slate-200 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="bg-indigo-600 text-white p-3 rounded-2xl inline-block shadow-lg shadow-indigo-100">
+                    <i data-lucide="store" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Kasir<span class="text-indigo-600">Qu</span></h2>
+                <p class="text-xs text-slate-500 font-medium">Sistem Point of Sale Pintar &amp; Inventaris Modern</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Username</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                        <input type="text" id="login-username" required placeholder="Masukkan username" class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all">
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                        <input type="password" id="login-password" required placeholder="Masukkan password" class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all">
+                    </div>
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-100 transition-all text-sm flex items-center justify-center gap-2">
                     <i data-lucide="log-in" class="w-4 h-4"></i>
                     Masuk ke Sistem
                 </button>
             </form>
-            
-            <!-- Konfigurasi API jika diluar GAS -->
-            <div id="login-api-config-container" class="hidden text-center pt-2">
-                <button onclick="openGasUrlConfigModalDirect()" class="text-xs text-indigo-600 hover:text-indigo-700 font-bold flex items-center justify-center gap-1 mx-auto transition-colors">
-                    <i data-lucide="link-2" class="w-3.5 h-3.5"></i> Hubungkan API Google Sheets
-                </button>
-            </div>
         </div>
     </section>
 
@@ -837,390 +877,8 @@
     </div>
 
     
-            <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
-                <p>Aplikasi ini berjalan di luar Google Apps Script (misalnya di Vercel). Silakan masukkan **URL Web App** Google Apps Script Anda untuk menghubungkan database Google Sheets.</p>
-                <div class="bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-100 space-y-1 text-[11px]">
-                    <p class="font-bold flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i> Cara mendapatkan URL:</p>
-                    <ol class="list-decimal list-inside space-y-0.5">
-                        <li>Buka Google Apps Script tempat Anda menaruh file <code class="bg-slate-200 px-1 rounded font-mono text-[10px]">Kode.js</code>.</li>
-                        <li>Klik <b>Deploy</b> &gt; <b>New deployment</b> di kanan atas.</li>
-                        <li>Pilih jenis <b>Web app</b> (ikon gir).</li>
-                        <li>Setel <i>Execute as</i> ke <b>Me (email Anda)</b> dan <i>Who has access</i> ke <b>Anyone</b>.</li>
-                        <li>Klik <b>Deploy</b>, lalu salin <b>Web app URL</b>.</li>
-                    </ol>
-                </div>
-            </div>
-            <div class="space-y-1.5">
-                <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">URL Web App Google Apps Script</label>
-                <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium transition-all">
-            </div>
-            <div class="flex gap-3 pt-2">
-                <button id="btn-config-cancel" onclick="closeGasUrlConfigModal()" class="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 transition-all">Batal</button>
-                <button id="btn-config-save" onclick="saveGasUrlConfig()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-100">Simpan & Hubungkan</button>
-            </div>
-        </div>
-    </div>
-
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2"></div>
 
-    <!-- APP CONTROLLER JAVASCRIPT -->
-    <script>
-        (function() {
-            'use strict';
-
-            let products = [];
-            let cart = [];
-            let transactions = [];
-            let stockInDraft = [];
-            let stockInTransactions = [];
-            let discountPercent = 0;
-            let selectedPaymentMethod = "TUNAI";
-            let activeCategory = "Semua";
-            let historyMode = "sales"; 
-            let activePage = "dashboard";
-
-            // Simpan callback tunda saat URL dikonfigurasi
-            
-
-            // --- GAS RUNNER HELPER (SINGLE PATTERN) ---
-            function gasRun(funcName) {
-                var args = Array.prototype.slice.call(arguments, 1);
-                return new Promise(function(resolve, reject) {
-                    // Cek jika sedang berjalan di dalam iframe Google Apps Script
-                    if (typeof google !== 'undefined' && google.script && google.script.run) {
-                        var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
-                        runner[funcName].apply(runner, args);
-                        return;
-                    }
-
-                    // Fallback: Berjalan di Vercel atau server statis eksternal
-                    const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
-                    if (!gasApiUrl) {
-                        console.warn("URL API Google Apps Script belum dikonfigurasi.");
-                        pendingGasRun = { funcName, args, resolve, reject };
-                        openGasUrlConfigModal();
-                        return;
-                    }
-
-                    // Memanggil Google Apps Script Web App API melalui POST
-                    fetch(gasApiUrl, {
-                        method: 'POST',
-                        mode: 'cors',
-                        redirect: 'follow',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8'
-                        },
-                        body: JSON.stringify({
-                            functionName: funcName,
-                            arguments: args
-                        })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error("Koneksi API gagal! Kode status HTTP: " + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then(result => {
-                        if (result && result.success) {
-                            resolve(result.data);
-                        } else {
-                            reject(new Error(result ? result.message : "Kesalahan API tidak diketahui"));
-                        }
-                    })
-                    .catch(error => {
-                        console.error("API Fetch Error:", error);
-                        reject(error);
-                    });
-                });
-            }
-
-            // Fungsi Pendukung Konfigurasi API
-            window.openGasUrlConfigModalDirect = function() {
-                const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
-                document.getElementById('gas-url-input').value = gasApiUrl;
-                document.getElementById('gas-url-config-modal').classList.remove('hidden');
-                lucide.createIcons();
-            };
-
-            window.openGasUrlConfigModal = function() {
-                document.getElementById('gas-url-config-modal').classList.remove('hidden');
-                lucide.createIcons();
-            };
-
-            window.closeGasUrlConfigModal = function() {
-                document.getElementById('gas-url-config-modal').classList.add('hidden');
-                pendingGasRun = null;
-            };
-
-            window.saveGasUrlConfig = function() {
-                const url = document.getElementById('gas-url-input').value.trim();
-                if (!url) {
-                    showToast("Masukkan URL Google Apps Script yang valid!", "error");
-                    return;
-                }
-                if (!url.startsWith("https://script.google.com/")) {
-                    showToast("URL harus dimulai dengan https://script.google.com/", "error");
-                    return;
-                }
-                localStorage.setItem('gas_api_url', url);
-                showToast("URL API Google Sheets berhasil disimpan!", "success");
-                document.getElementById('gas-url-config-modal').classList.add('hidden');
-                
-                // Jika ada pemanggilan tertunda, jalankan kembali
-                if (pendingGasRun) {
-                    const { funcName, args, resolve, reject } = pendingGasRun;
-                    pendingGasRun = null;
-                    gasRun(funcName, ...args).then(resolve).catch(reject);
-                }
-            };
-
-            // --- ENHANCED SECURITY AUTH MODULE ---
-            var Auth = (function() {
-                var _verified = false, _token = null, _user = null, _verifyKey = null;
-                return {
-                    init: function() { 
-                        _verifyKey = 'vk_' + Date.now() + '_' + Math.random().toString(36).slice(2); 
-                        return _verifyKey; 
-                    },
-                    login: function(token, user, key) { 
-                        if (key !== _verifyKey) return false; 
-                        _token = token; 
-                        _user = user; 
-                        _verified = true; 
-                        return true; 
-                    },
-                    isVerified: function() { 
-                        return _verified === true && !!_token && !!_user; 
-                    },
-                    getToken: function() { return _token; },
-                    getUser: function() { return _user ? JSON.parse(JSON.stringify(_user)) : null; },
-                    getRole: function() { return _user ? _user.role : null; },
-                    clear: function() { _verified = false; _token = null; _user = null; }
-                };
-            })();
-
-            let _authKey = null;
-
-            // --- LIFECYCLE INITIALIZER ---
-            window.addEventListener('DOMContentLoaded', () => {
-                _authKey = Auth.init();
-                initClock();
-                checkLoginState();
-                
-                // Cek jika berjalan di luar lingkungan Google Apps Script
-                const isGasEnv = (typeof google !== 'undefined' && google.script && google.script.run);
-                if (!isGasEnv) {
-                    // Tampilkan tombol konfigurasi API
-                    document.getElementById('login-api-config-container').classList.remove('hidden');
-                    
-                    
-                    
-                }
-                lucide.createIcons();
-            });
-
-            function initClock() {
-                const clockEl = document.getElementById('live-clock');
-                if (clockEl) {
-                    setInterval(() => {
-                        const now = new Date();
-                        clockEl.textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    }, 1000);
-                }
-            }
-
-            // --- AUTHENTICATION CONTROLLER ---
-            window.handleLoginSubmit = function(e) {
-                e.preventDefault();
-                const usernameInput = document.getElementById('login-username').value.trim();
-                const passwordInput = document.getElementById('login-password').value;
-
-                showFullPageLoading(true);
-
-                // Cek apakah menggunakan API Eksternal (Vercel) atau GAS Iframe
-                const isGasEnv = (typeof google !== 'undefined' && google.script && google.script.run);
-                const gasApiUrl = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
-
-                
-
-                // Call Production Backend API
-                gasRun('loginUser', usernameInput, passwordInput)
-                    .then(res => {
-                        showFullPageLoading(false);
-                        if (res.success) {
-                            completeLogin(res.token, res.user);
-                        } else {
-                            showToast(res.message || "Gagal melakukan Login", "error");
-                        }
-                    })
-                    .catch(err => {
-                        showFullPageLoading(false);
-                        showToast("Error sistem: " + err.message, "error");
-                    });
-            };
-
-            function completeLogin(token, user) {
-                const success = Auth.login(token, user, _authKey);
-                if (success) {
-                    showToast("Sesi dimulai. Selamat datang!", "success");
-                    document.getElementById('user-display-name').textContent = user.fullname;
-                    document.getElementById('user-display-role').textContent = user.role;
-                    document.getElementById('welcome-name').textContent = user.fullname;
-                    
-                    const mName = document.getElementById('user-mobile-name');
-                    const mRole = document.getElementById('user-mobile-role');
-                    if (mName) mName.textContent = user.fullname;
-                    if (mRole) mRole.textContent = user.role;
-
-                    // Role logic adjustment
-                    const addBtn = document.getElementById('add-prod-btn');
-                    if (addBtn) {
-                        if (user.role !== 'Admin') {
-                            addBtn.classList.add('hidden');
-                        } else {
-                            addBtn.classList.remove('hidden');
-                        }
-                    }
-
-                    checkLoginState();
-                    pullBackendDatabase();
-                } else {
-                    showToast("Verifikasi otentikasi lokal gagal.", "error");
-                }
-            }
-
-            window.logout = function() {
-                const token = Auth.getToken();
-                if (token) {
-                    gasRun('destroySession', token);
-                }
-                Auth.clear();
-                checkLoginState();
-                showToast("Sesi berakhir.", "info");
-            };
-
-            function checkLoginState() {
-                const loginPage = document.getElementById('loginPage');
-                const mainApp = document.getElementById('mainApp');
-                if (!loginPage || !mainApp) return;
-
-                if (Auth.isVerified()) {
-                    loginPage.classList.add('d-none');
-                    mainApp.classList.remove('d-none');
-                    showPage('dashboard', document.querySelector('[onclick*="dashboard"]'));
-                } else {
-                    mainApp.classList.add('d-none');
-                    loginPage.classList.remove('d-none');
-                    document.getElementById('login-username').value = "";
-                    document.getElementById('login-password').value = "";
-                }
-            }
-
-            function handleSessionExpired(res) {
-                if (res && res.sessionExpired) {
-                    logout();
-                    showToast("Sesi login Anda kedaluwarsa. Silakan masuk kembali.", "error");
-                    return true;
-                }
-                return false;
-            }
-
-            // --- BACKEND RECORD SYNCHRONIZER ---
-            function pullBackendDatabase() {
-                showFullPageLoading(true);
-
-                if (typeof google === 'undefined' && !localStorage.getItem('gas_api_url')) {
-                    // Fallback mock database for standalone presentation
-                    products = [
-                        { id: 1, name: "Nasi Goreng Spesial", price: 25000, category: "Makanan", stock: 30, emoji: "🍳" },
-                        { id: 2, name: "Mie Goreng Jawa", price: 22000, category: "Makanan", stock: 8, emoji: "🍜" },
-                        { id: 3, name: "Ayam Bakar Madu", price: 28000, category: "Makanan", stock: 15, emoji: "🍗" },
-                        { id: 4, name: "Es Teh Manis", price: 5000, category: "Minuman", stock: 100, emoji: "🥤" },
-                        { id: 5, name: "Kopi Susu Gula Aren", price: 18000, category: "Minuman", stock: 50, emoji: "☕" },
-                        { id: 6, name: "Juice Alpukat Kocok", price: 15000, category: "Minuman", stock: 5, emoji: "🥑" },
-                        { id: 7, name: "Kentang Goreng", price: 12000, category: "Cemilan", stock: 40, emoji: "🍟" },
-                        { id: 8, name: "Pisang Goreng Keju", price: 10000, category: "Cemilan", stock: 12, emoji: "🍌" }
-                    ];
-                    transactions = [];
-                    stockInTransactions = [];
-                    refreshAllPageElements();
-                    showFullPageLoading(false);
-                    return;
-                }
-
-                gasRun('getInitialData', Auth.getToken())
-                    .then(res => {
-                        showFullPageLoading(false);
-                        if (handleSessionExpired(res)) return;
-
-                        if (res.success) {
-                            products = res.products || [];
-                            transactions = res.transactions || [];
-                            stockInTransactions = res.stockInTransactions || [];
-                            refreshAllPageElements();
-                        } else {
-                            showToast("Gagal memuat basis data: " + res.message, "error");
-                        }
-                    })
-                    .catch(err => {
-                        showFullPageLoading(false);
-                        showToast("Sistem gagal menarik basis data: " + err.message, "error");
-                    });
-            }
-
-            function refreshAllPageElements() {
-                renderCategories();
-                renderProducts();
-                renderMgmtProducts();
-                updateCartSummary();
-                updateStockInProductSelector();
-                renderStockInDraft();
-                loadPageData(activePage);
-            }
-
-            // --- PAGE ISOLATION ROUTER ---
-            window.showPage = function(pageName, navEl) {
-                if (!Auth.isVerified()) { 
-                    logout(); 
-                    return; 
-                }
-
-                activePage = pageName;
-                
-                const pageTitles = {
-                    'dashboard': 'Dashboard & Ringkasan',
-                    'pos': 'Kasir (Point of Sale)',
-                    'products': 'Daftar & Kelola Inventaris',
-                    'stock-in': 'Input Stok Masuk',
-                    'transactions': 'Arsip & Riwayat Transaksi',
-                    'reports': 'Laporan Penjualan'
-                };
-                document.getElementById('active-page-title').textContent = pageTitles[pageName] || 'KasirQu';
-
-                // Hide all main containers
-                document.querySelectorAll('.app-page').forEach(function(page) {
-                    page.classList.add('d-none');
-                });
-
-                // Display targeted container
-                const target = document.getElementById('page-' + pageName);
-                if (target) target.classList.remove('d-none');
-
-                // Standardized navigation highlights
-                document.querySelectorAll('.nav-item-custom').forEach(function(item) {
-                    item.className = "nav-item-custom w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800/50 hover:text-white text-slate-400";
-                });
-                
-                if (navEl) {
-                    navEl.className = "nav-item-custom w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-indigo-400 bg-slate-800 hover:text-white";
-                }
-
-                loadPageData(pageName);
-            };
-
-            function loadPageData(pageName) {
-                // Stale routing check guard
     <script src="assets/js/app.js"></script>
 </html>
