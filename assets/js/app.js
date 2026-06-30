@@ -164,18 +164,6 @@
 
                 showFullPageLoading(true);
 
-                if (typeof google === 'undefined') {
-                    setTimeout(() => {
-                        showFullPageLoading(false);
-                        if (usernameInput.toLowerCase() === 'admin' && passwordInput === 'bismillah') {
-                            completeLogin("sim_token_12345", { fullname: "Admin (Preview)", role: "Admin" });
-                        } else {
-                            showToast("Kredensial salah! Gunakan admin/bismillah", "error");
-                        }
-                    }, 800);
-                    return;
-                }
-
                 gasRun('loginUser', usernameInput, passwordInput)
                     .then(res => {
                         showFullPageLoading(false);
@@ -222,7 +210,7 @@
 
             window.logout = function () {
                 const token = Auth.getToken();
-                if (token && typeof google !== 'undefined') {
+                if (token) {
                     gasRun('destroySession', token);
                 }
                 Auth.clear();
@@ -259,24 +247,6 @@
             // --- BACKEND RECORD SYNCHRONIZER ---
             function pullBackendDatabase() {
                 showFullPageLoading(true);
-
-                if (typeof google === 'undefined') {
-                    products = [
-                        { id: 1, name: "Nasi Goreng Spesial", price: 25000, category: "Makanan", stock: 30, emoji: "🍳" },
-                        { id: 2, name: "Mie Goreng Jawa", price: 22000, category: "Makanan", stock: 8, emoji: "🍜" },
-                        { id: 3, name: "Ayam Bakar Madu", price: 28000, category: "Makanan", stock: 15, emoji: "🍗" },
-                        { id: 4, name: "Es Teh Manis", price: 5000, category: "Minuman", stock: 100, emoji: "🥤" },
-                        { id: 5, name: "Kopi Susu Gula Aren", price: 18000, category: "Minuman", stock: 50, emoji: "☕" },
-                        { id: 6, name: "Juice Alpukat Kocok", price: 15000, category: "Minuman", stock: 5, emoji: "🥑" },
-                        { id: 7, name: "Kentang Goreng", price: 12000, category: "Cemilan", stock: 40, emoji: "🍟" },
-                        { id: 8, name: "Pisang Goreng Keju", price: 10000, category: "Cemilan", stock: 12, emoji: "🍌" }
-                    ];
-                    transactions = [];
-                    stockInTransactions = [];
-                    refreshAllPageElements();
-                    showFullPageLoading(false);
-                    return;
-                }
 
                 gasRun('getInitialData', Auth.getToken())
                     .then(res => {
@@ -1090,18 +1060,6 @@
                     change: selectedPaymentMethod === 'TUNAI' ? change : 0
                 };
 
-                if (typeof google === 'undefined') {
-                    cart.forEach(item => {
-                        const prod = products.find(p => p.id === item.product.id);
-                        if (prod) prod.stock -= item.quantity;
-                    });
-                    transactions.unshift(payload);
-                    showFullPageLoading(false);
-                    showReceipt(payload);
-                    resetCartAfterCheckout();
-                    return;
-                }
-
                 gasRun('processTransaction', Auth.getToken(), payload)
                     .then(res => {
                         showFullPageLoading(false);
@@ -1407,21 +1365,6 @@
                     stock: stock
                 };
 
-                if (typeof google === 'undefined') {
-                    if (id) {
-                        const index = products.findIndex(p => p.id === parseInt(id));
-                        if (index !== -1) products[index] = { ...products[index], ...payload };
-                    } else {
-                        const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-                        products.push({ ...payload, id: newId });
-                    }
-                    showFullPageLoading(false);
-                    refreshAllPageElements();
-                    closeProductModal();
-                    showToast("Produk berhasil disimpan!", "success");
-                    return;
-                }
-
                 gasRun('saveProduct', Auth.getToken(), payload)
                     .then(res => {
                         showFullPageLoading(false);
@@ -1473,16 +1416,6 @@
 
                 showCustomConfirm(`Apakah Anda yakin ingin menghapus produk "${name}"?`, () => {
                     showFullPageLoading(true);
-
-                    if (typeof google === 'undefined') {
-                        products.splice(index, 1);
-                        showFullPageLoading(false);
-                        refreshAllPageElements();
-                        cart = cart.filter(i => i.product.id !== productId);
-                        updateCartSummary();
-                        showToast(`Produk "${name}" dihapus`, "success");
-                        return;
-                    }
 
                     gasRun('deleteProduct', Auth.getToken(), productId)
                         .then(res => {
@@ -1653,26 +1586,6 @@
                     items: stockInDraft.map(s => ({ id: s.product.id, name: s.product.name, emoji: s.product.emoji, category: s.product.category, quantity: s.quantity, buyPrice: s.buyPrice })),
                     totalCost: window.currentStockInTotal
                 };
-
-                if (typeof google === 'undefined') {
-                    payload.items.forEach(draftItem => {
-                        const targetProduct = products.find(p => p.id === draftItem.id);
-                        if (targetProduct) targetProduct.stock += draftItem.quantity;
-                    });
-                    const now = new Date();
-                    const formattedDate = now.toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    stockInTransactions.unshift({ ...payload, date: formattedDate });
-
-                    stockInDraft = [];
-                    invoiceNoInput.value = "";
-                    supplierInput.value = "";
-                    showFullPageLoading(false);
-                    refreshAllPageElements();
-                    showPage('transactions', document.querySelector('[onclick*="transactions"]'));
-                    switchHistoryMode('stock-in');
-                    showToast("Faktur berhasil diproses secara lokal!", "success");
-                    return;
-                }
 
                 gasRun('submitStockInInvoice', Auth.getToken(), payload)
                     .then(res => {
