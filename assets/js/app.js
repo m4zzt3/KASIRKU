@@ -24,6 +24,7 @@
                 taxPercent: 11,
                 categories: ["Makanan", "Minuman", "Cemilan", "Lainnya"]
             };
+            let users = [];
 
             // --- GAS RUNNER HELPER (FETCH API) ---
             const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwziWt9-HMqSH4OJr4VZmv2qpeDsV8vzwkVmyZGNm-C6eExrbJDYUy3z3ouL-wgb2jm/exec";
@@ -226,6 +227,21 @@
                 if (Auth.isVerified()) {
                     loginPage.classList.add('d-none');
                     mainApp.classList.remove('d-none');
+                    
+                    // Show/hide admin menus based on role
+                    const role = Auth.getRole();
+                    const adminMenus = ['nav-users', 'nav-settings', 'nav-users-mobile', 'nav-settings-mobile'];
+                    adminMenus.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            if (role === 'Admin') {
+                                el.classList.remove('hidden');
+                            } else {
+                                el.classList.add('hidden');
+                            }
+                        }
+                    });
+
                     showPage('dashboard', document.querySelector('[onclick*="dashboard"]'));
                 } else {
                     mainApp.classList.add('d-none');
@@ -250,16 +266,31 @@
 
                 gasRun('getInitialData', Auth.getToken())
                     .then(res => {
-                        showFullPageLoading(false);
                         if (handleSessionExpired(res)) return;
 
                         if (res.success) {
                             products = res.products || [];
                             transactions = res.transactions || [];
                             stockInTransactions = res.stockInTransactions || [];
-                            refreshAllPageElements();
+                            
+                            // Fetch settings
+                            return gasRun('getSettings', Auth.getToken());
                         } else {
+                            showFullPageLoading(false);
                             showToast("Gagal memuat basis data: " + res.message, "error");
+                        }
+                    })
+                    .then(resSettings => {
+                        if (!resSettings) return;
+                        showFullPageLoading(false);
+                        if (resSettings.success && resSettings.settings) {
+                            appSettings = resSettings.settings;
+                        }
+                        refreshAllPageElements();
+                        
+                        // If admin, pull user list
+                        if (Auth.getRole() === 'Admin') {
+                            pullUsersList();
                         }
                     })
                     .catch(err => {
@@ -334,6 +365,8 @@
                 } else if (pageName === 'settings') {
                     populateSettingsForm();
                     renderSettingsCategories();
+                } else if (pageName === 'users') {
+                    pullUsersList();
                 }
             }
 
@@ -344,21 +377,23 @@
                     sidebar.classList.remove('-translate-x-full');
                     backdrop.classList.remove('hidden');
                 } else {
-                    sidebar.classList.add('-translate-x-full');
+                sidebar.classList.add('-translate-x-full');
                     backdrop.classList.add('hidden');
                 }
             };
 
             // --- SETTINGS CONTROLLERS ---
             function populateSettingsForm() {
-                document.getElementById('set-store-name').value = appSettings.storeName;
-                document.getElementById('set-store-address').value = appSettings.storeAddress;
-                document.getElementById('set-store-phone').value = appSettings.storePhone;
-                document.getElementById('set-receipt-footer').value = appSettings.receiptFooterText;
-                document.getElementById('set-tax-percent').value = appSettings.taxPercent;
+                document.getElementById('set-store-name').value = appSettings.storeName || '';
+                document.getElementById('set-store-address').value = appSettings.storeAddress || '';
+                document.getElementById('set-store-phone').value = appSettings.storePhone || '';
+                document.getElementById('set-receipt-footer').value = appSettings.receiptFooterText || '';
+                document.getElementById('set-tax-percent').value = appSettings.taxPercent || 0;
             }
 
-            window.saveStoreSettings = function () {
+            // Mapping handleSaveSettings from index.html form submit
+            window.handleSaveSettings = function (e) {
+                e.preventDefault();
                 const sName = document.getElementById('set-store-name').value.trim();
                 const sAddress = document.getElementById('set-store-address').value.trim();
                 const sPhone = document.getElementById('set-store-phone').value.trim();
@@ -370,14 +405,34 @@
                     return;
                 }
 
-                appSettings.storeName = sName;
-                appSettings.storeAddress = sAddress;
-                appSettings.storePhone = sPhone;
-                appSettings.receiptFooterText = sFooter;
-                appSettings.taxPercent = sTax;
+                showFullPageLoading(true);
 
-                showToast("Profil toko & pajak dinamis disimpan!", "success");
-                refreshAllPageElements();
+                const newSettings = {
+                    storeName: sName,
+                    storeAddress: sAddress,
+                    storePhone: sPhone,
+                    receiptFooterText: sFooter,
+                    taxPercent: sTax,
+                    categories: appSettings.categories
+                };
+
+                gasRun('saveSettings', Auth.getToken(), newSettings)
+                    .then(res => {
+                        showFullPageLoading(false);
+                        if (handleSessionExpired(res)) return;
+
+                        if (res.success) {
+                            appSettings = newSettings;
+                            showToast("Pengaturan berhasil disimpan ke Google Sheets!", "success");
+                            refreshAllPageElements();
+                        } else {
+                            showToast("Gagal menyimpan pengaturan: " + res.message, "error");
+                        }
+                    })
+                    .catch(err => {
+                        showFullPageLoading(false);
+                        showToast("Koneksi gagal: " + err.message, "error");
+                    });
             };
 
             window.renderSettingsCategories = function () {
@@ -395,8 +450,9 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             };
 
-            window.addSettingsCategory = function () {
-                const input = document.getElementById('set-new-cat');
+            // Mapping handleAddCategory from index.html
+            window.handleAddCategory = function () {
+                const input = document.getElementById('new-category-input');
                 const catName = input.value.trim();
                 if (!catName) {
                     showToast("Nama kategori tidak boleh kosong!", "error");
@@ -408,19 +464,55 @@
                     return;
                 }
 
-                appSettings.categories.push(catName);
-                input.value = "";
-                showToast(`Kategori "${catName}" ditambahkan!`, "success");
-                renderSettingsCategories();
-                refreshAllPageElements();
+                showFullPageLoading(true);
+                const updatedCategories = [...appSettings.categories, catName];
+                const newSettings = { ...appSettings, categories: updatedCategories };
+
+                gasRun('saveSettings', Auth.getToken(), newSettings)
+                    .then(res => {
+                        showFullPageLoading(false);
+                        if (handleSessionExpired(res)) return;
+
+                        if (res.success) {
+                            appSettings.categories = updatedCategories;
+                            input.value = "";
+                            showToast(`Kategori "${catName}" berhasil ditambahkan!`, "success");
+                            renderSettingsCategories();
+                            refreshAllPageElements();
+                        } else {
+                            showToast("Gagal menambah kategori: " + res.message, "error");
+                        }
+                    })
+                    .catch(err => {
+                        showFullPageLoading(false);
+                        showToast("Koneksi gagal: " + err.message, "error");
+                    });
             };
 
             window.deleteSettingsCategory = function (catName) {
                 showCustomConfirm(`Apakah Anda yakin ingin menghapus kategori "${catName}"?`, () => {
-                    appSettings.categories = appSettings.categories.filter(c => c !== catName);
-                    showToast(`Kategori "${catName}" dihapus.`, "success");
-                    renderSettingsCategories();
-                    refreshAllPageElements();
+                    showFullPageLoading(true);
+                    const updatedCategories = appSettings.categories.filter(c => c !== catName);
+                    const newSettings = { ...appSettings, categories: updatedCategories };
+
+                    gasRun('saveSettings', Auth.getToken(), newSettings)
+                        .then(res => {
+                            showFullPageLoading(false);
+                            if (handleSessionExpired(res)) return;
+
+                            if (res.success) {
+                                appSettings.categories = updatedCategories;
+                                showToast(`Kategori "${catName}" berhasil dihapus.`, "success");
+                                renderSettingsCategories();
+                                refreshAllPageElements();
+                            } else {
+                                showToast("Gagal menghapus kategori: " + res.message, "error");
+                            }
+                        })
+                        .catch(err => {
+                            showFullPageLoading(false);
+                            showToast("Koneksi gagal: " + err.message, "error");
+                        });
                 });
             };
 
@@ -437,6 +529,161 @@
                 showCustomConfirm("Ini akan mengunduh ulang seluruh database Anda dari Google Sheet. Lanjutkan?", () => {
                     pullBackendDatabase();
                     showToast("Database disinkronisasi paksa!", "success");
+                });
+            };
+
+            // --- USER MANAGEMENT CONTROLLERS ---
+            function pullUsersList() {
+                gasRun('getUsers', Auth.getToken())
+                    .then(res => {
+                        if (res.success) {
+                            users = res.users || [];
+                            renderUsers();
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Gagal menarik daftar user:", err);
+                    });
+            }
+
+            function renderUsers() {
+                const tbody = document.getElementById('users-table-body');
+                if (!tbody) return;
+
+                if (users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada data pengguna.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = users.map(u => {
+                    const isSystemAdmin = u.username.toLowerCase() === 'admin';
+                    const actionButtons = isSystemAdmin ? 
+                        `<span class="text-xs text-slate-400 font-semibold italic">Sistem Utama</span>` : 
+                        `<button onclick="editUser('${escapeHTML(u.username)}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg inline-flex items-center transition-colors"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                         <button onclick="deleteUser('${escapeHTML(u.username)}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg inline-flex items-center transition-colors"><i data-lucide="trash" class="w-4 h-4"></i></button>`;
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-4 px-6 font-semibold text-slate-800">${escapeHTML(u.fullname)}</td>
+                            <td class="py-4 px-6 text-slate-500">${escapeHTML(u.username)}</td>
+                            <td class="py-4 px-6">
+                                <span class="inline-block px-2.5 py-1 rounded-full text-xs font-bold ${u.role === 'Admin' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700'}">
+                                    ${escapeHTML(u.role)}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-right space-x-2">
+                                ${actionButtons}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+
+            window.openUserModal = function (isEdit = false) {
+                document.getElementById('user-modal-title').textContent = isEdit ? "Ubah Detail User" : "Tambah User Baru";
+                document.getElementById('user-modal').classList.remove('hidden');
+                document.getElementById('edit-user-is-edit').value = isEdit ? "true" : "false";
+
+                const usernameInput = document.getElementById('user-username');
+                const passwordLabel = document.getElementById('user-password-label');
+                const passwordHelp = document.getElementById('user-password-help');
+
+                if (isEdit) {
+                    usernameInput.disabled = true; // Username cannot be changed
+                    passwordLabel.textContent = "Password Baru";
+                    passwordHelp.classList.remove('hidden');
+                    document.getElementById('user-password').required = false;
+                } else {
+                    usernameInput.disabled = false;
+                    passwordLabel.textContent = "Password";
+                    passwordHelp.classList.add('hidden');
+                    document.getElementById('user-password').required = true;
+                    
+                    document.getElementById('user-fullname').value = "";
+                    usernameInput.value = "";
+                    document.getElementById('user-password').value = "";
+                    document.getElementById('user-role').value = "Staff";
+                }
+            };
+
+            window.closeUserModal = function () {
+                document.getElementById('user-modal').classList.add('hidden');
+            };
+
+            window.handleSaveUser = function (e) {
+                e.preventDefault();
+                const isEdit = document.getElementById('edit-user-is-edit').value === "true";
+                const fullname = document.getElementById('user-fullname').value.trim();
+                const username = document.getElementById('user-username').value.trim();
+                const password = document.getElementById('user-password').value;
+                const role = document.getElementById('user-role').value;
+
+                if (!fullname || !username || (!isEdit && !password)) {
+                    showToast("Semua kolom wajib diisi!", "error");
+                    return;
+                }
+
+                showFullPageLoading(true);
+
+                const payload = {
+                    username: username,
+                    fullname: fullname,
+                    role: role
+                };
+
+                gasRun('saveUser', Auth.getToken(), payload, password || null)
+                    .then(res => {
+                        showFullPageLoading(false);
+                        if (handleSessionExpired(res)) return;
+
+                        if (res.success) {
+                            showToast(isEdit ? "User berhasil diperbarui!" : "User baru berhasil ditambahkan!", "success");
+                            closeUserModal();
+                            pullUsersList();
+                        } else {
+                            showToast("Gagal menyimpan user: " + res.message, "error");
+                        }
+                    })
+                    .catch(err => {
+                        showFullPageLoading(false);
+                        showToast("Koneksi gagal: " + err.message, "error");
+                    });
+            };
+
+            window.editUser = function (usernameVal) {
+                const u = users.find(u => u.username === usernameVal);
+                if (!u) return;
+
+                document.getElementById('user-fullname').value = u.fullname;
+                document.getElementById('user-username').value = u.username;
+                document.getElementById('user-password').value = "";
+                document.getElementById('user-role').value = u.role;
+
+                window.openUserModal(true);
+            };
+
+            window.deleteUser = function (usernameVal) {
+                showCustomConfirm(`Apakah Anda yakin ingin menghapus user dengan username "${usernameVal}"?`, () => {
+                    showFullPageLoading(true);
+
+                    gasRun('deleteUser', Auth.getToken(), usernameVal)
+                        .then(res => {
+                            showFullPageLoading(false);
+                            if (handleSessionExpired(res)) return;
+
+                            if (res.success) {
+                                showToast(`User "${usernameVal}" berhasil dihapus.`, "success");
+                                pullUsersList();
+                            } else {
+                                showToast("Gagal menghapus user: " + res.message, "error");
+                            }
+                        })
+                        .catch(err => {
+                            showFullPageLoading(false);
+                            showToast("Koneksi gagal: " + err.message, "error");
+                        });
                 });
             };
 

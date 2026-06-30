@@ -66,6 +66,20 @@ function setupDatabase() {
         logSheet.appendRow(['Timestamp', 'Username', 'Action', 'Detail']);
     }
 
+    // 6. Sheet Settings
+    let settingsSheet = ss.getSheetByName('Settings');
+    if (!settingsSheet) {
+        settingsSheet = ss.insertSheet('Settings');
+        settingsSheet.appendRow(['Key', 'Value']);
+        // Seed default settings
+        settingsSheet.appendRow(['storeName', 'KasirQu Store']);
+        settingsSheet.appendRow(['storeAddress', 'Jl. Raya Kebon Jeruk No. 24']);
+        settingsSheet.appendRow(['storePhone', '(021) 1234-5678']);
+        settingsSheet.appendRow(['receiptFooterText', 'Terima Kasih Atas Kunjungan Anda']);
+        settingsSheet.appendRow(['taxPercent', '11']);
+        settingsSheet.appendRow(['categories', JSON.stringify(["Makanan", "Minuman", "Cemilan", "Lainnya"])]);
+    }
+
     return "Database berhasil disiapkan! Gunakan user: admin / password: Admin@2026";
 }
 
@@ -522,5 +536,186 @@ function doPost(e) {
         return ContentService.createTextOutput(JSON.stringify({
             error: error.message
         })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// ================= SETTINGS & USER MANAGEMENT CONTROLLERS =================
+
+/**
+ * Mengambil data konfigurasi pengaturan
+ */
+function getSettings(token) {
+    const session = validateSession(token);
+    if (!session.valid) return { success: false, message: session.message, sessionExpired: true };
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Settings');
+    if (!sheet) return { success: false, message: "Sheet Settings tidak ditemukan." };
+    
+    const values = sheet.getDataRange().getValues();
+    const settings = {};
+    for (let i = 1; i < values.length; i++) {
+        const key = values[i][0];
+        let value = values[i][1];
+        if (key === 'taxPercent') {
+            value = parseFloat(value);
+        } else if (key === 'categories') {
+            value = JSON.parse(value);
+        }
+        settings[key] = value;
+    }
+    return { success: true, settings: settings };
+}
+
+/**
+ * Menyimpan data konfigurasi pengaturan (Lock Service Enabled)
+ */
+function saveSettings(token, settings) {
+    const session = validateSession(token);
+    if (!session.valid) return { success: false, message: session.message, sessionExpired: true };
+    if (session.username !== 'admin') return { success: false, message: "Hanya Admin yang dapat mengubah pengaturan." };
+
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName('Settings');
+        if (!sheet) return { success: false, message: "Sheet Settings tidak ditemukan." };
+        
+        const range = sheet.getDataRange();
+        const values = range.getValues();
+        
+        for (let key in settings) {
+            let value = settings[key];
+            if (key === 'categories') {
+                value = JSON.stringify(value);
+            }
+            
+            let found = false;
+            for (let i = 1; i < values.length; i++) {
+                if (values[i][0] === key) {
+                    sheet.getRange(i + 1, 2).setValue(value);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                sheet.appendRow([key, value]);
+            }
+        }
+        logAction(session.username, "SAVE_SETTINGS", "Memperbarui pengaturan sistem.");
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: "Server sibuk: " + e.message };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+/**
+ * Mengambil daftar pengguna (Users) - Khusus Admin
+ */
+function getUsers(token) {
+    const session = validateSession(token);
+    if (!session.valid) return { success: false, message: session.message, sessionExpired: true };
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Users');
+    if (!sheet) return { success: false, message: "Sheet Users tidak ditemukan." };
+    
+    const values = sheet.getDataRange().getValues();
+    const users = [];
+    for (let i = 1; i < values.length; i++) {
+        users.push({
+            username: values[i][0],
+            fullname: values[i][2],
+            role: values[i][3]
+        });
+    }
+    return { success: true, users: users };
+}
+
+/**
+ * Menambah atau mengubah user (Lock Service Enabled) - Khusus Admin
+ */
+function saveUser(token, user, newPassword) {
+    const session = validateSession(token);
+    if (!session.valid) return { success: false, message: session.message, sessionExpired: true };
+    if (session.username !== 'admin') return { success: false, message: "Hanya Admin yang dapat mengelola user." };
+
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName('Users');
+        if (!sheet) return { success: false, message: "Sheet Users tidak ditemukan." };
+        
+        const range = sheet.getDataRange();
+        const values = range.getValues();
+        const normUser = String(user.username).trim().toLowerCase();
+        
+        let foundIndex = -1;
+        for (let i = 1; i < values.length; i++) {
+            if (String(values[i][0]).toLowerCase() === normUser) {
+                foundIndex = i;
+                break;
+            }
+        }
+        
+        if (foundIndex !== -1) {
+            // Edit User
+            const rowNum = foundIndex + 1;
+            sheet.getRange(rowNum, 3).setValue(user.fullname);
+            sheet.getRange(rowNum, 4).setValue(user.role);
+            if (newPassword) {
+                sheet.getRange(rowNum, 2).setValue(hashPassword(newPassword));
+            }
+            logAction(session.username, "EDIT_USER", "Memperbarui user: " + normUser);
+            return { success: true };
+        } else {
+            // Tambah User Baru
+            if (!newPassword) return { success: false, message: "Password wajib diisi untuk user baru." };
+            sheet.appendRow([normUser, hashPassword(newPassword), user.fullname, user.role]);
+            logAction(session.username, "ADD_USER", "Menambahkan user baru: " + normUser);
+            return { success: true };
+        }
+    } catch (e) {
+        return { success: false, message: "Server sibuk: " + e.message };
+    } finally {
+        lock.releaseLock();
+    }
+}
+
+/**
+ * Menghapus user (Lock Service Enabled) - Khusus Admin
+ */
+function deleteUser(token, username) {
+    const session = validateSession(token);
+    if (!session.valid) return { success: false, message: session.message, sessionExpired: true };
+    if (session.username !== 'admin') return { success: false, message: "Hanya Admin yang dapat mengelola user." };
+    if (String(username).trim().toLowerCase() === 'admin') return { success: false, message: "User admin bawaan tidak dapat dihapus." };
+
+    const lock = LockService.getScriptLock();
+    try {
+        lock.waitLock(10000);
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName('Users');
+        if (!sheet) return { success: false, message: "Sheet Users tidak ditemukan." };
+        
+        const values = sheet.getDataRange().getValues();
+        const normUser = String(username).trim().toLowerCase();
+        
+        for (let i = 1; i < values.length; i++) {
+            if (String(values[i][0]).toLowerCase() === normUser) {
+                sheet.deleteRow(i + 1);
+                logAction(session.username, "DELETE_USER", "Menghapus user: " + normUser);
+                return { success: true };
+            }
+        }
+        return { success: false, message: "User tidak ditemukan." };
+    } catch (e) {
+        return { success: false, message: "Server sibuk: " + e.message };
+    } finally {
+        lock.releaseLock();
     }
 }
